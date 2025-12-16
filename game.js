@@ -9,8 +9,7 @@ function resize() {
   canvas.height = window.innerHeight;
 }
 window.addEventListener("resize", resize);
-// 초기화 시 실행 보장
-setTimeout(resize, 0); 
+setTimeout(resize, 0); // 초기화 보장
 
 /* =========================
    Game State
@@ -35,34 +34,34 @@ document.addEventListener("keyup", (e) => {
 });
 
 /* =========================
-   Car Data (물리 설정 조절)
+   Car Data (튜닝 완료)
 ========================= */
 const carTypes = {
   sport: {
-    maxSpeed: 16,    // 최고 속도
-    accel: 0.15,     // 가속력
-    friction: 0.985, // 기본 마찰 (높을수록 안 미끄러짐)
-    turn: 0.03,      // [수정] 회전 속도 낮춤 (부드럽게)
-    driftGrip: 0.03, // [신규] 드리프트 시 그립력 (낮을수록 많이 미끄러짐)
-    driftDrag: 0.96, // [신규] 드리프트 시 속도 감소 저항
+    maxSpeed: 24,    // [상향] 속도 대폭 증가 (기존 16 -> 24)
+    accel: 0.25,     // 가속력 증가
+    friction: 0.985, 
+    turn: 0.025,     // [하향] 핸들을 더 무겁게 (덜 획획 돌아감)
+    driftGrip: 0.02, // [하향] 드리프트 시 거의 얼음 위처럼 미끄러짐
+    driftDrag: 0.99, // 드리프트 중 속도 감소 최소화 (롱 드리프트 가능)
     color: "red",
   },
   drift: {
-    maxSpeed: 15,
-    accel: 0.12,
+    maxSpeed: 22,
+    accel: 0.2,
     friction: 0.98,
-    turn: 0.04,      // [수정] 회전 속도 낮춤
-    driftGrip: 0.015, // 더 잘 미끄러짐
-    driftDrag: 0.95,
+    turn: 0.035,     // 드리프트카는 조금 더 잘 꺾임
+    driftGrip: 0.01, // 극도로 잘 미끄러짐
+    driftDrag: 0.985,
     color: "cyan",
   },
   heavy: {
-    maxSpeed: 13,
-    accel: 0.08,
-    friction: 0.99,
-    turn: 0.02,      // [수정] 회전 속도 낮춤
-    driftGrip: 0.05, // 덜 미끄러짐
-    driftDrag: 0.97,
+    maxSpeed: 20,
+    accel: 0.15,
+    friction: 0.99, // 무거워서 관성이 더 셈
+    turn: 0.018,    // 둔한 핸들링
+    driftGrip: 0.04,
+    driftDrag: 0.98,
     color: "orange",
   },
 };
@@ -82,14 +81,13 @@ startBtn.onclick = startGame;
    Game Logic Functions
 ========================= */
 function startGame() {
-  resize(); // 시작 전 화면 크기 확실히 계산
+  resize(); 
   const type = carTypes[carSelect.value];
   
   car = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     angle: -Math.PI / 2, // 위쪽 보고 시작
-    // speed: 0, // <-- [삭제] 스칼라 speed 대신 벡터 vx, vy만 사용합니다.
     vx: 0,
     vy: 0,
     ...type,
@@ -113,7 +111,6 @@ window.exitGame = function() {
   gameState = "menu";
 }
 
-// ★★★ 물리 엔진 핵심 업데이트 부분 ★★★
 function update() {
   if (gameState !== "playing" || !car) return;
 
@@ -123,25 +120,27 @@ function update() {
   const right = keys["ArrowRight"] || keys["KeyD"];
   const space = keys["Space"];
 
-  // 현재 속도 벡터의 길이(실제 속력) 계산
+  // 현재 실제 속도 계산
   let currentSpeed = Math.sqrt(car.vx*car.vx + car.vy*car.vy);
   
-  // 드리프트 조건: 일정 속도 이상에서 Space 누름
-  const isDrifting = space && currentSpeed > 3;
+  // 드리프트 조건
+  const isDrifting = space && currentSpeed > 4;
 
   // 1. 스티어링 (핸들링)
   if (currentSpeed > 0.5) {
-    // 후진 중이면 핸들 반대로
     const direction = (forward || currentSpeed > 1) ? 1 : -1;
-    // 드리프트 중에는 핸들이 조금 더 예민하게 반응 (오버스티어)
-    const turnMultiplier = isDrifting ? 1.5 : 1;
+    // 드리프트 중에는 차 머리만 휙 돌아가게 배율 증가
+    const turnMultiplier = isDrifting ? 1.8 : 1.0; 
 
-    if (left) car.angle -= car.turn * turnMultiplier * direction;
-    if (right) car.angle += car.turn * turnMultiplier * direction;
+    // 고속 주행 시 핸들링 민감도 보정 (너무 빠르면 핸들 덜 꺾임)
+    let speedSensitivity = 1.0;
+    if (currentSpeed > 15) speedSensitivity = 0.8; 
+
+    if (left) car.angle -= car.turn * turnMultiplier * speedSensitivity * direction;
+    if (right) car.angle += car.turn * turnMultiplier * speedSensitivity * direction;
   }
 
-  // 2. 가속/감속 힘 적용 (엔진 파워)
-  // 차가 바라보는 방향의 단위 벡터
+  // 2. 가속/감속
   const headingX = Math.cos(car.angle);
   const headingY = Math.sin(car.angle);
 
@@ -149,58 +148,57 @@ function update() {
     car.vx += headingX * car.accel;
     car.vy += headingY * car.accel;
   } else if (backward) {
-    car.vx -= headingX * car.accel * 0.6; // 후진은 힘을 약하게
-    car.vy -= headingY * car.accel * 0.6;
+    car.vx -= headingX * car.accel * 0.8; 
+    car.vy -= headingY * car.accel * 0.8;
   }
 
-  // 3. 물리 및 마찰 적용 (미끄러짐 구현 핵심)
+  // 3. 물리 엔진 (미끄러짐 처리)
   if (isDrifting) {
     // [드리프트 모드]
-    // 그립력이 매우 낮아져서 관성대로 미끄러짐
-    // 방향 전환은 car.driftGrip 만큼만 반영됨
+    // heading(차 머리 방향)과 velocity(실제 이동 방향)을 거의 분리시킴
+    // driftGrip이 낮을수록 원래 가던 방향으로 계속 밀려감
     car.vx = car.vx * (1 - car.driftGrip) + (headingX * currentSpeed) * car.driftGrip;
     car.vy = car.vy * (1 - car.driftGrip) + (headingY * currentSpeed) * car.driftGrip;
     
-    // 드리프트 중에는 옆으로 밀리는 저항 때문에 속도가 더 빨리 줌
+    // 드리프트 중 속도 유지력 (Drag가 1에 가까울수록 속도가 안 줄어듦)
     car.vx *= car.driftDrag;
     car.vy *= car.driftDrag;
 
   } else {
-    // [일반 주행 모드]
-    // 그립력이 높아서(0.25) 차가 보는 방향으로 속도 벡터가 빠르게 정렬됨
-    const normalGrip = 0.25; 
+    // [일반 주행]
+    // 그립력이 좋아서 차가 보는 방향으로 즉시 따라감
+    const normalGrip = 0.2; 
     car.vx = car.vx * (1 - normalGrip) + (headingX * currentSpeed) * normalGrip;
     car.vy = car.vy * (1 - normalGrip) + (headingY * currentSpeed) * normalGrip;
 
-    // 기본 도로 마찰
+    // 도로 마찰
     car.vx *= car.friction;
     car.vy *= car.friction;
   }
 
-  // 속도 제한 (최대 속도 넘지 않게)
+  // 최대 속도 제한
   currentSpeed = Math.sqrt(car.vx*car.vx + car.vy*car.vy);
   if (currentSpeed > car.maxSpeed) {
     car.vx = (car.vx / currentSpeed) * car.maxSpeed;
     car.vy = (car.vy / currentSpeed) * car.maxSpeed;
   }
   
-  // 4. 위치 업데이트
+  // 4. 위치 업데이트 및 화면 루프
   car.x += car.vx;
   car.y += car.vy;
 
-  // 화면 밖 루프 처리
   if (car.x < 0) car.x = canvas.width;
   if (car.x > canvas.width) car.x = 0;
   if (car.y < 0) car.y = canvas.height;
   if (car.y > canvas.height) car.y = 0;
 
-  // HUD 업데이트
-  const displaySpeed = Math.floor(currentSpeed * 15);
+  // HUD (속도감 뻥튀기 표현)
+  const displaySpeed = Math.floor(currentSpeed * 12);
   speedText.textContent = displaySpeed + " km/h";
 }
 
 /* =========================
-   Draw Functions
+   Draw
 ========================= */
 function draw() {
   ctx.fillStyle = "#2c2c2c";
@@ -208,41 +206,48 @@ function draw() {
 
   if (!car) return;
 
+  // 타이어 자국 (드리프트 시 시각 효과)
+  if (keys["Space"] && Math.abs(car.vx) + Math.abs(car.vy) > 5) {
+      // 심심하면 여기에 자국 그리기 로직 추가 가능
+  }
+
   ctx.save();
   ctx.translate(car.x, car.y);
   ctx.rotate(car.angle);
 
   // 차 몸체
   ctx.fillStyle = car.color;
-  // 그림자 효과
   ctx.shadowBlur = 15;
   ctx.shadowColor = "rgba(0,0,0,0.5)";
   ctx.fillRect(-20, -10, 40, 20);
-  ctx.shadowBlur = 0; // 그림자 초기화
+  ctx.shadowBlur = 0;
+
+  // 유리창 (앞뒤 구분을 위해 추가)
+  ctx.fillStyle = "#000";
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(0, -8, 10, 16);
+  ctx.globalAlpha = 1.0;
 
   // 헤드라이트
   ctx.fillStyle = "#fff";
-  ctx.fillRect(15, -8, 5, 4);
-  ctx.fillRect(15, 4, 5, 4);
+  ctx.fillRect(18, -8, 4, 4);
+  ctx.fillRect(18, 4, 4, 4);
   
-  // 브레이크등 (후진 또는 드리프트 시 점등)
+  // 브레이크등
   if (keys["ArrowDown"] || keys["KeyS"] || keys["Space"]) {
      ctx.fillStyle = "#ff0000";
-     ctx.shadowBlur = 10;
+     ctx.shadowBlur = 15;
      ctx.shadowColor = "red";
   } else {
      ctx.fillStyle = "#550000";
      ctx.shadowBlur = 0;
   }
-  ctx.fillRect(-20, -8, 3, 4);
-  ctx.fillRect(-20, 4, 3, 4);
+  ctx.fillRect(-20, -8, 2, 4);
+  ctx.fillRect(-20, 4, 2, 4);
 
   ctx.restore();
 }
 
-/* =========================
-   Game Loop
-========================= */
 function loop() {
   if (gameState === "playing") {
     update();
