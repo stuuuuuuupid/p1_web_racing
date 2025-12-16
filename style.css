@@ -1,0 +1,28 @@
+body {
+  margin: 0;
+  background: #111;
+  color: #eee;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+#ui {
+  padding: 10px;
+}
+
+canvas {
+  background: #2c2c2c;
+  display: block;
+  margin: 0 auto;
+  border: 2px solid #444;
+}
+
+select, button {
+  padding: 6px 10px;
+  margin: 4px;
+}
+
+.hint {
+  font-size: 14px;
+  color: #aaa;
+}

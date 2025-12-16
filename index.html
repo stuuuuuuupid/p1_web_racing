@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Keyboard Racing</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="ui">
+    <h1>Keyboard Racing</h1>
+    <label>차 선택:</label>
+    <select id="carSelect">
+      <option value="sport">스포츠카</option>
+      <option value="drift">드리프트카</option>
+      <option value="heavy">헤비카</option>
+    </select>
+    <button onclick="resetGame()">리셋</button>
+    <div class="hint">↑ 가속 | ↓ 감속 | ← → 조향 | Space 드리프트</div>
+  </div>
+
+  <canvas id="game" width="800" height="500"></canvas>
+
+  <script src="game.js"></script>
+</body>
+</html>
