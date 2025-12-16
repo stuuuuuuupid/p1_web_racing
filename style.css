@@ -29,11 +29,16 @@ canvas {
   display: none;
 }
 
+/* --- 수정된 부분: 속도계 위치 중앙 하단 --- */
 #hud {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
+  bottom: 15%;         /* 바닥에서 15% 정도 띄움 */
+  left: 50%;           /* 가로 중앙 */
+  transform: translateX(-50%); /* 정확한 중앙 정렬 */
   color: #0f0;
-  font-size: 20px;
+  font-size: 24px;     /* 글자 크기 약간 키움 */
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
   z-index: 5;
+  pointer-events: none; /* 마우스 클릭 통과 */
 }
