@@ -1,27 +1,32 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Keyboard Racing</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
 <body>
 
-  <div id="ui">
-    <h1>Keyboard Racing</h1>
-    <label>차 선택:</label>
-    <select id="carSelect">
-      <option value="sport">스포츠카</option>
-      <option value="drift">드리프트카</option>
-      <option value="heavy">헤비카</option>
-    </select>
-    <button onclick="resetGame()">리셋</button>
-    <div class="hint">↑ 가속 | ↓ 감속 | ← → 조향 | Space 드리프트</div>
-  </div>
+<!-- 시작 메뉴 -->
+<div id="menu" class="overlay">
+  <h1>Keyboard Racing</h1>
 
-  <canvas id="game" width="800" height="500"></canvas>
+  <label>차 선택</label>
+  <select id="carSelect">
+    <option value="sport">스포츠카</option>
+    <option value="drift">드리프트카</option>
+    <option value="heavy">헤비카</option>
+  </select>
 
-  <script src="game.js"></script>
+  <button id="startBtn">시작하기</button>
+</div>
+
+<!-- 일시정지 메뉴 -->
+<div id="pause" class="overlay hidden">
+  <h2>일시정지</h2>
+  <button onclick="resumeGame()">계속</button>
+  <button onclick="exitGame()">나가기</button>
+</div>
+
+<!-- 속도계 -->
+<div id="hud">
+  <span id="speed">0 km/h</span>
+</div>
+
+<canvas id="game"></canvas>
+
+<script src="game.js"></script>
 </body>
-</html>
