@@ -1,17 +1,81 @@
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+/* =========================
+   Canvas & Resize
+========================= */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* =========================
+   Game State
+========================= */
+let gameState = "menu"; // menu | playing | pause
+
+/* =========================
+   Input
+========================= */
+const keys = {};
+
+document.addEventListener("keydown", (e) => {
+  keys[e.code] = true;
+
+  // ESC → pause
+  if (e.code === "Escape" && gameState === "playing") {
+    gameState = "pause";
+    document.getElementById("pause").classList.remove("hidden");
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  keys[e.code] = false;
+});
+
+/* =========================
+   Car Data
+========================= */
 const carTypes = {
-  sport: { maxSpeed: 9, accel: 0.3, turn: 0.05, drift: 0.92, color: 'red' },
-  drift: { maxSpeed: 8, accel: 0.26, turn: 0.07, drift: 0.88, color: 'cyan' },
-  heavy: { maxSpeed: 7, accel: 0.22, turn: 0.04, drift: 0.97, color: 'orange' }
+  sport: {
+    maxSpeed: 220,
+    accel: 0.4,
+    turn: 0.04,
+    drift: 0.93,
+    color: "red",
+  },
+  drift: {
+    maxSpeed: 200,
+    accel: 0.35,
+    turn: 0.06,
+    drift: 0.9,
+    color: "cyan",
+  },
+  heavy: {
+    maxSpeed: 180,
+    accel: 0.3,
+    turn: 0.03,
+    drift: 0.96,
+    color: "orange",
+  },
 };
 
-let keys = {};
-let car;
+let car = null;
 
-function resetGame() {
-  const type = carTypes[document.getElementById('carSelect').value];
+/* =========================
+   Start / Exit / Resume
+========================= */
+const carSelect = document.getElementById("carSelect");
+const startBtn = document.getElementById("startBtn");
+const speedText = document.getElementById("speed");
+
+startBtn.onclick = startGame;
+
+function startGame() {
+  const type = carTypes[carSelect.value];
+
   car = {
     x: canvas.width / 2,
     y: canvas.height / 2,
@@ -19,33 +83,97 @@ function resetGame() {
     speed: 0,
     vx: 0,
     vy: 0,
-    ...type
+    ...type,
   };
+
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("pause").classList.add("hidden");
+
+  gameState = "playing";
 }
 
-resetGame();
+function resumeGame() {
+  document.getElementById("pause").classList.add("hidden");
+  gameState = "playing";
+}
 
-document.addEventListener('keydown', e => keys[e.code] = true);
-document.addEventListener('keyup', e => keys[e.code] = false);
+function exitGame() {
+  document.getElementById("pause").classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
+  gameState = "menu";
+}
 
+/* =========================
+   Update Logic
+========================= */
 function update() {
-  if (keys['ArrowUp']) car.speed += car.accel;
-  if (keys['ArrowDown']) car.speed *= 0.94;
+  if (gameState !== "playing" || !car) return;
 
-  car.speed = Math.min(car.speed, car.maxSpeed);
+  const forward = keys["ArrowUp"] || keys["KeyW"];
+  const backward = keys["ArrowDown"] || keys["KeyS"];
+  const left = keys["ArrowLeft"] || keys["KeyA"];
+  const right = keys["ArrowRight"] || keys["KeyD"];
+  const drifting = keys["Space"] && Math.abs(car.speed) > 20;
+
+  /* =====================
+     Acceleration
+  ===================== */
+  if (forward) car.speed += car.accel;
+  if (backward) car.speed -= car.accel * 0.7;
+
   car.speed *= 0.99;
+  car.speed = Math.max(
+    Math.min(car.speed, car.maxSpeed),
+    -car.maxSpeed * 0.4
+  );
 
-  if (keys['ArrowLeft']) car.angle -= car.turn * (car.speed / car.maxSpeed);
-  if (keys['ArrowRight']) car.angle += car.turn * (car.speed / car.maxSpeed);
+  /* =====================
+     Steering
+  ===================== */
+  let turnPower = car.turn * (car.speed / car.maxSpeed);
 
-  const driftFactor = keys['Space'] ? car.drift : 0.98;
+  // 🔥 드리프트 중이면 회전력 폭증
+  if (drifting) {
+    turnPower *= 2.8; // ← 핵심
+  }
 
-  car.vx += Math.cos(car.angle) * car.speed;
-  car.vy += Math.sin(car.angle) * car.speed;
+  if (left) car.angle -= turnPower;
+  if (right) car.angle += turnPower;
 
-  car.vx *= driftFactor;
-  car.vy *= driftFactor;
+  /* =====================
+     Velocity
+  ===================== */
+  const accelForce = 0.05;
 
+  car.vx += Math.cos(car.angle) * car.speed * accelForce;
+  car.vy += Math.sin(car.angle) * car.speed * accelForce;
+
+  /* =====================
+     Drift Physics
+  ===================== */
+  if (drifting) {
+    // 진행 방향과 차 방향 분리
+    car.vx *= 0.92;
+    car.vy *= 0.92;
+
+    // 방향 틀어주는 순간적인 킥
+    if (left) {
+      car.vx += Math.sin(car.angle) * car.speed * 0.03;
+      car.vy -= Math.cos(car.angle) * car.speed * 0.03;
+    }
+    if (right) {
+      car.vx -= Math.sin(car.angle) * car.speed * 0.03;
+      car.vy += Math.cos(car.angle) * car.speed * 0.03;
+    }
+  } else {
+    // 평상시 마찰
+    car.vx *= 0.97;
+    car.vy *= 0.97;
+  }
+
+  /* =====================
+     Position
+  ===================== */
   car.x += car.vx;
   car.y += car.vy;
 
@@ -53,23 +181,10 @@ function update() {
   if (car.x > canvas.width) car.x = 0;
   if (car.y < 0) car.y = canvas.height;
   if (car.y > canvas.height) car.y = 0;
+
+  /* =====================
+     HUD
+  ===================== */
+  speedText.textContent =
+    Math.abs(Math.round(car.speed)) + " km/h";
 }
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.save();
-  ctx.translate(car.x, car.y);
-  ctx.rotate(car.angle);
-  ctx.fillStyle = car.color;
-  ctx.fillRect(-16, -8, 32, 16);
-  ctx.restore();
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-loop();
