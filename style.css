@@ -25,20 +25,34 @@ canvas {
   z-index: 10;
 }
 
+/* 버튼 스타일 예쁘게 추가 */
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background: #444;
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 4px;
+}
+button:hover {
+  background: #666;
+}
+
 .hidden {
   display: none;
 }
 
-/* --- 수정된 부분: 속도계 위치 중앙 하단 --- */
+/* 중앙 하단 속도계 */
 #hud {
   position: fixed;
-  bottom: 15%;         /* 바닥에서 15% 정도 띄움 */
-  left: 50%;           /* 가로 중앙 */
-  transform: translateX(-50%); /* 정확한 중앙 정렬 */
+  bottom: 15%;
+  left: 50%;
+  transform: translateX(-50%);
   color: #0f0;
-  font-size: 24px;     /* 글자 크기 약간 키움 */
+  font-size: 24px;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
   z-index: 5;
-  pointer-events: none; /* 마우스 클릭 통과 */
+  pointer-events: none;
 }
